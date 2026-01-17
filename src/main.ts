@@ -6,8 +6,6 @@ import GUI from 'lil-gui';
 // addons
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-// triangle
-// import { triangle } from './geometries/triangle'
 
 const gui = new GUI({
   width: 400,

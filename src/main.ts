@@ -1,39 +1,135 @@
+import './style.css';
 import * as THREE from 'three';
-import './style.css'
+import gsap from 'gsap';
+import GUI from 'lil-gui';
 
+// addons
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+// triangle
+// import { triangle } from './geometries/triangle'
+
+const gui = new GUI({
+  width: 400,
+  title: 'Debug UI Panel',
+  closeFolders: false,
+});
+
+/*
+ * INFO:
+ * To show or hide debug UI panel press h on your keyboard
+ */
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'h') gui.show(gui._hidden);
+});
+
+const cubeFolder = gui.addFolder('Example Cube');
+const guiObj = {
+  color: '#22ccff',
+  spin: () => {
+    gsap.to(mesh.rotation, { y: mesh.rotation.y + Math.PI * 2, duration: 2 });
+  },
+  subdivision: 1,
+};
+
+// canvas
+const canvas = document.querySelector<HTMLCanvasElement>('#app')!;
+
+// scene
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
+// objects
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const material = new THREE.MeshBasicMaterial({
+  color: guiObj.color,
+  wireframe: true,
+});
+const mesh = new THREE.Mesh(geometry, material);
 
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-const material = new THREE.MeshBasicMaterial( { color: 0x00ffcc, wireframe: true } );
-const cube = new THREE.Mesh( geometry, material );
-scene.add( cube );
+scene.add(mesh);
 
-camera.position.z = 5;
+// Adding mesh to GUI
+cubeFolder.add(mesh.position, 'y').name('Position Y').min(-3).max(3).step(0.01);
+cubeFolder.add(mesh, 'visible');
+cubeFolder.add(material, 'wireframe');
+cubeFolder.addColor(guiObj, 'color').onChange((_val: THREE.Color) => {
+  material.color.set(guiObj.color);
+});
+cubeFolder.add(guiObj, 'spin').name('animate');
+cubeFolder
+  .add(guiObj, 'subdivision')
+  .min(1)
+  .max(20)
+  .step(1)
+  .onFinishChange(() => {
+    mesh.geometry.dispose();
+    mesh.geometry = new THREE.BoxGeometry(1, 1, 1, guiObj.subdivision, guiObj.subdivision, guiObj.subdivision);
+  });
 
-const clock = new THREE.Clock()
+// NOTE: custom triangle
+// scene.add(triangle);
 
+// sizes
+const sizes = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+};
 
+// Camera
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height);
+camera.position.z = 3;
+
+scene.add(camera);
+
+// Controls
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+// Clock
+// const clock = new THREE.Clock();
+
+// resize window
+window.addEventListener('resize', () => {
+  console.log('resize');
+  // update sizes
+  sizes.width = window.innerWidth;
+  sizes.height = window.innerHeight;
+  //update camera
+  camera.aspect = sizes.width / sizes.height;
+  camera.updateProjectionMatrix();
+  // update renderer
+  renderer.setSize(sizes.width, sizes.height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
+// fullscreen? (on dbl click)
+window.addEventListener('dblclick', () => {
+  // NOTE: on old safari => should check document.webkitFullscreenElement
+  if (!document.fullscreenElement) {
+    canvas.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+});
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+});
+
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+// Animation
 const tick = () => {
-  // Update objects, handle user input, etc.
-  // ...
-  const elapsedTime = clock.getElapsedTime(); // Total elapsed time since the clock started
+  // const elapsedTime = clock.getElapsedTime();
 
+  // NOTE: update controls
+  controls.update();
+  // end
 
-
-  cube.rotation.y = Math.sin(elapsedTime)
-  cube.rotation.x = Math.sin(elapsedTime)
-  cube.rotation.z = Math.cos(elapsedTime)
-
-  // Render the scene
   renderer.render(scene, camera);
-  // Call tick again on the next frame
   window.requestAnimationFrame(tick);
 };
 
-// Start the loop
 tick();
